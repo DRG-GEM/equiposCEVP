@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestor de Equipos Cooperativos - Virgen del Pasico</title>
+    <title>Gestor de Equipos Cooperativos - CEVP</title>
     <!-- Fuente Inter para un look más profesional -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -191,6 +191,12 @@
         }
         summary:hover { background: #e2e8f0; color: var(--text-main); }
         .history-content { padding: 20px; background: white; }
+        
+        .history-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+        }
 
         /* Resultados */
         #results-area { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; }
@@ -268,7 +274,7 @@
             <img src="https://web.virgendelpasico.net/wp-content/uploads/2024/01/cropped-ncoop-scaled-1-300x253.jpg" alt="Logo Colegio" class="logo">
             <div class="title-group">
                 <h1>Gestor de Equipos</h1>
-                <p>Colegio Virgen del Pasico</p>
+                <p>CEVP</p>
             </div>
         </div>
         <div id="save-indicator" class="status-indicator">
@@ -303,21 +309,40 @@
             <div class="form-group">
                 <label for="mandatory">Parejas Obligatorias (Juntos)</label>
                 <input type="text" id="mandatory" placeholder="Ej: Luis, Ana; Pedro, Pablo" oninput="handleInput()">
-                <small style="color: var(--success); font-size: 0.75rem; margin-top: 4px; display:block;">Prioridad Máxima: Irán siempre juntos.</small>
+                <small style="color: var(--success); font-size: 0.75rem; margin-top: 4px; display:block;">
+                    Separa las parejas con <strong>punto y coma (;)</strong>. <br>
+                    Ejemplo: <em>Ana, Luis; María, Sofía</em>
+                </small>
             </div>
             <div class="form-group">
                 <label for="conflicts">Incompatibilidades (Separados)</label>
                 <input type="text" id="conflicts" placeholder="Ej: Juan, Pedro; Ana, María" oninput="handleInput()">
-                <small style="color: var(--danger); font-size: 0.75rem; margin-top: 4px; display:block;">Nunca irán en el mismo equipo.</small>
+                <small style="color: var(--danger); font-size: 0.75rem; margin-top: 4px; display:block;">
+                    Separa los grupos incompatibles con <strong>punto y coma (;)</strong>. <br>
+                    Ejemplo: <em>Juan, Pedro; Carlos, Marta</em>
+                </small>
             </div>
         </div>
 
         <details>
             <summary>📂 Histórico / Grupos Anteriores (Evitar Repeticiones)</summary>
             <div class="history-content">
-                <div class="form-group">
-                    <label style="font-weight: normal; color: var(--text-main);">Pega aquí el contenido de archivos CSV anteriores o listas de equipos. El sistema intentará <strong>evitar</strong> que estas personas vuelvan a coincidir.</label>
-                    <textarea id="history-input" placeholder="Ej: Equipo 1, Juan, Pedro, Maria..." oninput="handleInput()" style="height: 120px; font-family: monospace; font-size: 0.85rem; color: var(--text-muted);"></textarea>
+                <p style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-muted);">
+                    Pega aquí los listados completos de distribuciones anteriores. El sistema leerá estas listas y tratará de no volver a juntar a personas que ya hayan coincidido.
+                </p>
+                <div class="history-grid">
+                    <div class="form-group">
+                        <label>Distribución Anterior 1</label>
+                        <textarea id="history-1" placeholder="Pega aquí la lista o CSV de una vez anterior..." oninput="handleInput()" style="height: 120px; font-family: monospace; font-size: 0.85rem; color: var(--text-muted);"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Distribución Anterior 2</label>
+                        <textarea id="history-2" placeholder="Pega aquí otra lista..." oninput="handleInput()" style="height: 120px; font-family: monospace; font-size: 0.85rem; color: var(--text-muted);"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Distribución Anterior 3</label>
+                        <textarea id="history-3" placeholder="Pega aquí otra lista..." oninput="handleInput()" style="height: 120px; font-family: monospace; font-size: 0.85rem; color: var(--text-muted);"></textarea>
+                    </div>
                 </div>
             </div>
         </details>
@@ -335,7 +360,7 @@
                     CSV
                 </button>
                 <button class="btn-secondary" onclick="window.print()">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
                     PDF
                 </button>
             </div>
@@ -354,7 +379,7 @@
 
 <script>
     // --- Estado y Configuración ---
-    const STORAGE_KEY = 'coop_teams_data_v2';
+    const STORAGE_KEY = 'coop_teams_data_v3'; // Nueva versión de key para limpiar caché anterior
     let currentTeams = []; 
     let timeoutId = null;
 
@@ -366,7 +391,10 @@
         count: document.getElementById('team-count'),
         conflicts: document.getElementById('conflicts'),
         mandatory: document.getElementById('mandatory'),
-        history: document.getElementById('history-input'),
+        // Histórico ahora son 3
+        h1: document.getElementById('history-1'),
+        h2: document.getElementById('history-2'),
+        h3: document.getElementById('history-3'),
         results: document.getElementById('results-area'),
         indicator: document.getElementById('save-indicator')
     };
@@ -390,7 +418,9 @@
             count: els.count.value,
             conflicts: els.conflicts.value,
             mandatory: els.mandatory.value,
-            history: els.history.value
+            h1: els.h1.value,
+            h2: els.h2.value,
+            h3: els.h3.value
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }
@@ -405,7 +435,9 @@
             els.count.value = parsed.count || 4;
             els.conflicts.value = parsed.conflicts || '';
             els.mandatory.value = parsed.mandatory || '';
-            els.history.value = parsed.history || '';
+            els.h1.value = parsed.h1 || '';
+            els.h2.value = parsed.h2 || '';
+            els.h3.value = parsed.h3 || '';
         }
     }
 
@@ -503,7 +535,10 @@
         const numTeams = parseInt(els.count.value) || 1;
         
         const strictConflicts = parsePairs(els.conflicts.value);
-        const historyConflicts = parseHistory(els.history.value);
+        // Concatenar historial de los 3 cuadros
+        const fullHistoryText = (els.h1.value + '\n' + els.h2.value + '\n' + els.h3.value);
+        const historyConflicts = parseHistory(fullHistoryText);
+        
         const allConflicts = [...strictConflicts, ...historyConflicts];
         const mandatoryGroups = parsePairs(els.mandatory.value);
 
@@ -514,7 +549,7 @@
 
         let bestAllocation = null;
         let attempts = 0;
-        const MAX_ATTEMPTS = 500; // Aumentado para robustez
+        const MAX_ATTEMPTS = 500; 
 
         // Bucle de reintento
         while (attempts < MAX_ATTEMPTS) {
@@ -596,9 +631,6 @@
             
             // Fallback
             const teams = Array.from({ length: numTeams }, (_, i) => ({ id: i + 1, members: [] }));
-            let idx = 0;
-            const remaining = [...high, ...med, ...low].filter(s => !s.assigned); // Solo reasignar si falló algo grave, simplificado aqui reasignamos todo en fallback
-            
             // Reset total para fallback
             const all = [...high, ...med, ...low];
             const fallbackTeams = Array.from({ length: numTeams }, (_, i) => ({ id: i + 1, members: [] }));
@@ -668,7 +700,7 @@
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `equipos_cooperativos_colegio_${new Date().toISOString().slice(0,10)}.csv`);
+        link.setAttribute("download", `equipos_cooperativos_cevp_${new Date().toISOString().slice(0,10)}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
