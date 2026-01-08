@@ -72,6 +72,12 @@
         
         .animate-pop { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes popIn { 0% { opacity:0; transform: scale(0.5); } 100% { opacity:1; transform: scale(1); } }
+
+        /* Estilo para el modal */
+        #verify-modal {
+            backdrop-filter: blur(4px);
+            background-color: rgba(0,0,0,0.4);
+        }
     </style>
 </head>
 <body class="min-h-screen text-slate-800 flex flex-col">
@@ -86,7 +92,6 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-bold leading-none tracking-tight">Bingo Verbal</h1>
-                    <!-- TEXTO MODIFICADO -->
                     <span class="text-xs text-slate-400 font-bold tracking-wide">CEVP</span>
                 </div>
             </div>
@@ -142,7 +147,7 @@
                         </div>
                     </div>
 
-                    <!-- SELECTOR DE DIFICULTAD (REEMPLAZA FILTROS) -->
+                    <!-- SELECTOR DE DIFICULTAD -->
                     <div class="mb-8">
                         <label class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 block">2. Nivel de Dificultad</label>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -257,7 +262,6 @@
                                     <i id="eye-icon" class="ph ph-eye-slash text-2xl"></i>
                                 </button>
                                 <div id="spoiler-answer" class="text-lg font-bold text-slate-800 opacity-0 transition-opacity select-none bg-white px-4 py-1 rounded shadow-sm border border-slate-200">
-                                    <!-- Aquí va la respuesta oculta -->
                                     ...
                                 </div>
                             </div>
@@ -274,7 +278,11 @@
                 <div class="lg:col-span-4 bg-white rounded-2xl shadow-lg border border-slate-200 flex flex-col overflow-hidden max-h-[600px]">
                     <div class="bg-slate-100 p-4 font-bold text-slate-700 flex items-center justify-between border-b border-slate-200">
                         <span class="flex items-center gap-2"><i class="ph ph-clock-counter-clockwise"></i> Últimos Verbos</span>
-                        <span class="text-xs bg-white px-2 py-1 rounded border border-slate-200 text-slate-400 font-mono">LOG</span>
+                        <div class="flex gap-2">
+                            <button onclick="openVerifyModal()" class="bg-white hover:bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-1 rounded text-xs font-bold transition flex items-center gap-1">
+                                <i class="ph ph-check-circle"></i> Comprobar
+                            </button>
+                        </div>
                     </div>
                     <ul id="history-list" class="flex-1 overflow-y-auto p-2 space-y-2 bg-slate-50">
                         <!-- Items -->
@@ -309,14 +317,39 @@
                 </div>
                 
                 <div class="bg-slate-100 p-2 flex justify-between items-center text-[10px] text-slate-400 font-mono uppercase border-t border-slate-200">
-                    <span>ID: <span id="card-id">--</span></span>
+                    <span>ID: <span id="card-id" class="font-bold text-indigo-600 text-lg">--</span></span>
                     <span onclick="generateStudentCard()" class="cursor-pointer hover:text-indigo-500 underline decoration-dotted">Cambiar Cartón</span>
                 </div>
+            </div>
+            
+            <div class="mt-4 text-center text-xs text-slate-400 px-4">
+                Si cantas Bingo, dicta tu <strong>número de ID</strong> al profesor para comprobarlo.
             </div>
 
         </section>
 
     </main>
+
+    <!-- MODAL DE VERIFICACIÓN (PROFESOR) -->
+    <div id="verify-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden transform transition-all scale-95 opacity-0" id="verify-modal-content">
+            <div class="bg-slate-800 p-4 text-white flex justify-between items-center">
+                <h3 class="font-bold flex items-center gap-2"><i class="ph ph-shield-check"></i> Comprobar Cartón</h3>
+                <button onclick="closeVerifyModal()" class="hover:bg-slate-700 p-1 rounded"><i class="ph ph-x text-lg"></i></button>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-slate-600 mb-4">Introduce el ID del cartón del alumno para verificar si su Bingo es correcto.</p>
+                <div class="flex gap-2 mb-4">
+                    <input type="number" id="verify-input" placeholder="Ej: 4582" class="flex-grow border-2 border-slate-200 rounded-lg px-4 py-2 text-lg font-bold text-center tracking-widest focus:border-indigo-500 focus:outline-none">
+                    <button onclick="verifyCard()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700">Verificar</button>
+                </div>
+                <!-- Resultado -->
+                <div id="verify-result" class="hidden rounded-lg p-4 border text-center">
+                    <!-- Contenido dinámico -->
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- CONFETI -->
     <canvas id="confetti-canvas" class="fixed top-0 left-0 w-full h-full pointer-events-none z-50"></canvas>
@@ -324,10 +357,23 @@
     <!-- LOGICA -->
     <script>
         // ============================================
-        // 1. GENERACIÓN DE DATOS ESTRUCTURADOS (TAGS)
+        // 0. GENERADOR DE NÚMEROS ALEATORIOS CON SEMILLA
         // ============================================
-        
-        // Estructura Raw para fácil edición: [Verbo, Conjugación, Persona, Número, Tiempo, Modo, Tipo]
+        // Clase para generar secuencias deterministas basadas en el ID del cartón
+        class SeededRandom {
+            constructor(seed) {
+                this.seed = seed;
+            }
+            // Algoritmo Linear Congruential Generator simple
+            next() {
+                this.seed = (this.seed * 9301 + 49297) % 233280;
+                return this.seed / 233280;
+            }
+        }
+
+        // ============================================
+        // 1. DATOS
+        // ============================================
         const rawData = [
             // --- INDICATIVO SIMPLE (30+) ---
             ["Comer", "Yo como", "1ª", "Singular", "Presente", "Indicativo", "simple"],
@@ -436,7 +482,6 @@
             tense: d[4],
             mood: d[5],
             type: d[6],
-            // Texto completo para el modo "identificador" del alumno
             fullDesc: `${d[2]} ${d[3]} ${d[4]} (${d[5]})`
         }));
 
@@ -448,6 +493,7 @@
             mode: 'analyst',
             filtered: [],
             available: [],
+            drawnIds: new Set(), // NUEVO: Para comprobar bingos
             currentVerb: null
         };
 
@@ -456,37 +502,27 @@
         // ============================================
 
         function startGame(role) {
-            // Leer Nivel de Dificultad
             const diffLevel = document.querySelector('input[name="difficulty"]:checked').value;
             let filtered = [];
 
-            // Lógica de filtrado según nivel
             filtered = verbDatabase.filter(v => {
-                if (diffLevel === "1") {
-                    // Nivel 1: Solo Indicativo Simple
-                    return v.mood === 'Indicativo' && v.type === 'simple';
-                } else if (diffLevel === "2") {
-                    // Nivel 2: Todo el Indicativo
-                    return v.mood === 'Indicativo';
-                } else {
-                    // Nivel 3: Todo (Indicativo + Subjuntivo)
-                    return true; 
-                }
+                if (diffLevel === "1") return v.mood === 'Indicativo' && v.type === 'simple';
+                else if (diffLevel === "2") return v.mood === 'Indicativo';
+                else return true; 
             });
 
             if (filtered.length < 12) {
-                document.getElementById('error-msg').innerText = "Error: No hay suficientes verbos para este nivel.";
+                document.getElementById('error-msg').innerText = "Error: No hay suficientes verbos.";
                 document.getElementById('error-msg').classList.remove('hidden');
                 return;
             }
 
-            // Guardar Estado
             gameState.filtered = filtered;
             gameState.available = [...filtered];
+            gameState.drawnIds = new Set(); // Resetear
             gameState.role = role;
             gameState.mode = document.querySelector('input[name="gameMode"]:checked').value;
 
-            // Cambiar UI
             document.getElementById('config-screen').classList.add('hidden');
             
             if (role === 'teacher') {
@@ -521,48 +557,40 @@
                 return;
             }
 
-            // Reset Spoiler
             document.getElementById('spoiler-answer').classList.add('opacity-0');
             document.getElementById('eye-icon').className = "ph ph-eye-slash text-2xl";
 
-            // Sacar Bola
             const idx = Math.floor(Math.random() * gameState.available.length);
             const verb = gameState.available[idx];
+            
             gameState.available.splice(idx, 1);
+            gameState.drawnIds.add(verb.id); // Guardar ID
             gameState.currentVerb = verb;
+            
             updateRemaining();
 
-            // Renderizar Bola según MODO
             const display = document.getElementById('ball-display');
             const answerEl = document.getElementById('spoiler-answer');
-
-            display.innerHTML = ''; // Limpiar
+            display.innerHTML = ''; 
 
             if (gameState.mode === 'analyst') {
-                // MODO ANALISTA: Muestro TAGS, Oculto Conjugación
-                // Formato Tarjetitas
                 display.innerHTML = `
                     <div class="animate-pop flex flex-col items-center gap-4">
                         <div class="text-xs text-slate-400 font-mono uppercase tracking-widest mb-2">Descripción Gramatical</div>
-                        
                         <div class="flex flex-wrap justify-center gap-2 max-w-2xl">
                             <span class="tag-badge tag-person">${verb.person} Persona</span>
                             <span class="tag-badge tag-number">${verb.number}</span>
                         </div>
-                        
                         <div class="flex flex-wrap justify-center gap-2 max-w-3xl my-2">
                             <span class="tag-badge tag-tense text-2xl md:text-4xl py-3 px-6 shadow-md border-b-4 border-orange-200">${verb.tense}</span>
                         </div>
-
                         <div class="flex flex-wrap justify-center gap-2">
                             <span class="tag-badge tag-mood">${verb.mood}</span>
                         </div>
                     </div>
                 `;
-                answerEl.innerText = verb.conjugation; // "Yo como"
-
+                answerEl.innerText = verb.conjugation; 
             } else {
-                // MODO IDENTIFICADOR: Muestro Conjugación, Oculto Tags
                 display.innerHTML = `
                     <div class="animate-pop flex flex-col items-center">
                         <div class="text-xs text-slate-400 font-mono uppercase tracking-widest mb-4">Verbo Conjugado</div>
@@ -570,11 +598,9 @@
                         <div class="bg-indigo-50 text-indigo-400 px-4 py-1 rounded-full text-sm font-bold">(${verb.infinitive})</div>
                     </div>
                 `;
-                // Descripción abreviada para respuesta
                 answerEl.innerText = `${verb.person} ${verb.number} ${verb.tense}`;
             }
 
-            // Historial
             addToHistory(verb);
         }
 
@@ -582,8 +608,6 @@
             const list = document.getElementById('history-list');
             const li = document.createElement('li');
             li.className = "bg-white p-3 rounded border border-slate-100 shadow-sm flex justify-between items-center text-sm hover:bg-indigo-50 transition";
-            
-            // Texto del historial depende del modo inverso? No, historial muestra AMBOS en pequeño para referencia del profe
             li.innerHTML = `
                 <div>
                     <span class="font-bold text-slate-700 block">${verb.conjugation}</span>
@@ -594,30 +618,110 @@
             list.prepend(li);
         }
 
+        // --- SISTEMA DE VERIFICACIÓN AVANZADO ---
+        function openVerifyModal() {
+            const modal = document.getElementById('verify-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.querySelector('#verify-modal-content').classList.remove('scale-95', 'opacity-0');
+                modal.querySelector('#verify-modal-content').classList.add('scale-100', 'opacity-100');
+            }, 10);
+            document.getElementById('verify-input').value = "";
+            document.getElementById('verify-result').classList.add('hidden');
+        }
+
+        function closeVerifyModal() {
+            const modal = document.getElementById('verify-modal');
+            modal.querySelector('#verify-modal-content').classList.remove('scale-100', 'opacity-100');
+            modal.querySelector('#verify-modal-content').classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        function verifyCard() {
+            const inputId = parseInt(document.getElementById('verify-input').value);
+            const resultDiv = document.getElementById('verify-result');
+            resultDiv.classList.remove('hidden');
+
+            if (!inputId || isNaN(inputId)) {
+                resultDiv.className = "bg-red-50 text-red-600 p-4 rounded-lg border border-red-200 mt-4";
+                resultDiv.innerHTML = "Por favor, introduce un ID válido.";
+                return;
+            }
+
+            // 1. Reconstruir el cartón usando la Semilla (Seed)
+            const seededRandom = new SeededRandom(inputId);
+            let deck = [...gameState.filtered];
+            
+            // Algoritmo Fisher-Yates con random seeded
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(seededRandom.next() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+            const studentCards = deck.slice(0, 12);
+
+            // 2. Comprobar contra las bolas sacadas
+            let matches = 0;
+            let missing = [];
+
+            studentCards.forEach(verb => {
+                if (gameState.drawnIds.has(verb.id)) {
+                    matches++;
+                } else {
+                    missing.push(verb.conjugation);
+                }
+            });
+
+            // 3. Mostrar Resultado
+            if (matches === 12) {
+                resultDiv.className = "bg-emerald-50 text-emerald-800 p-4 rounded-lg border border-emerald-200 mt-4 animate-bounce";
+                resultDiv.innerHTML = `
+                    <div class="text-4xl mb-2">🎉</div>
+                    <div class="font-bold text-xl">¡BINGO CORRECTO!</div>
+                    <div class="text-sm mt-1">El cartón #${inputId} está completo.</div>
+                `;
+                startConfetti();
+            } else {
+                resultDiv.className = "bg-rose-50 text-rose-800 p-4 rounded-lg border border-rose-200 mt-4";
+                resultDiv.innerHTML = `
+                    <div class="text-4xl mb-2">❌</div>
+                    <div class="font-bold text-lg">BINGO INCORRECTO</div>
+                    <div class="text-sm mt-2 font-bold">Faltan ${12 - matches} verbos:</div>
+                    <div class="text-xs mt-1 text-rose-600 italic">${missing.slice(0,3).join(", ")}${missing.length > 3 ? '...' : ''}</div>
+                `;
+            }
+        }
+
         // --- ALUMNO ---
         function generateStudentCard() {
             const grid = document.getElementById('bingo-grid');
             grid.innerHTML = "";
-            document.getElementById('card-id').innerText = Math.floor(Math.random()*9000)+1000;
+            
+            // Generar ID random (que actuará como semilla)
+            const cardId = Math.floor(Math.random() * 9000) + 1000;
+            document.getElementById('card-id').innerText = cardId;
 
-            // 12 items random
-            const shuffled = [...gameState.filtered].sort(() => 0.5 - Math.random());
-            const items = shuffled.slice(0, 12);
+            // Replicamos la misma lógica de "Shuffle" que usaremos en la verificación
+            const seededRandom = new SeededRandom(cardId);
+            let deck = [...gameState.filtered];
+
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(seededRandom.next() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+            const items = deck.slice(0, 12);
 
             items.forEach(verb => {
                 const cell = document.createElement('div');
                 cell.className = "bingo-cell rounded flex items-center justify-center p-1 h-20 md:h-24 text-center select-none";
 
-                // TEXTO DEL ALUMNO (Inverso al del profe)
                 let text = "";
                 let subtext = "";
                 
                 if (gameState.mode === 'analyst') {
-                    // Profe muestra Descripción -> Alumno ve Conjugación
                     text = `<span class="font-bold text-slate-700 text-sm md:text-base leading-tight">${verb.conjugation}</span>`;
                 } else {
-                    // Profe muestra Conjugación -> Alumno ve Descripción
-                    // Simplificamos visualmente para que quepa
                     text = `<span class="font-bold text-slate-700 text-xs md:text-sm leading-tight block">${verb.tense}</span>`;
                     subtext = `<span class="block text-[10px] text-slate-500 mt-1">${verb.person} ${verb.number}</span>`;
                 }
@@ -638,7 +742,8 @@
         // --- CONFETI ---
         function checkBingo() {
             startConfetti();
-            setTimeout(() => alert("¡BINGO! Comprobemos..."), 500);
+            const id = document.getElementById('card-id').innerText;
+            setTimeout(() => alert(`¡BINGO CANTADO!\n\nPor favor, dicta tu ID (${id}) al profesor para que lo verifique.`), 300);
         }
 
         // Simple Canvas Confetti
