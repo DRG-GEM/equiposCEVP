@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Equipos Cooperativos</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --danger: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --bg: #f3f4f6;
+            --card-bg: #ffffff;
+            --text: #1f2937;
+            --border: #e5e7eb;
+            
+            /* Niveles */
+            --level-high: #10b981; /* Verde */
+            --level-med: #f59e0b;  /* Naranja */
+            --level-low: #f43f5e;  /* Rojo/Rosa */
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg); color: var(--text); line-height: 1.5; padding: 20px; }
+
+        /* Layout Principal */
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        h1 { font-size: 1.5rem; font-weight: 700; color: #111827; }
+        
+        .status-indicator { 
+            font-size: 0.875rem; color: var(--success); opacity: 0; transition: opacity 0.3s; 
+            display: flex; align-items: center; gap: 5px;
+        }
+        .status-indicator.visible { opacity: 1; }
+
+        /* Grid de Entradas */
+        .input-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        
+        .card { background: var(--card-bg); padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid var(--border); }
+        .card h2 { font-size: 1.1rem; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        
+        /* Indicadores de color en títulos */
+        .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .dot.high { background-color: var(--level-high); }
+        .dot.med { background-color: var(--level-med); }
+        .dot.low { background-color: var(--level-low); }
+
+        textarea { 
+            width: 100%; height: 200px; padding: 10px; border: 1px solid var(--border); border-radius: 6px; resize: vertical; font-family: inherit; font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+        textarea:focus { outline: none; border-color: var(--primary); ring: 2px solid var(--primary); }
+
+        /* Configuración y Controles */
+        .controls-wrapper { background: var(--card-bg); padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        
+        .config-row { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; align-items: flex-start; }
+        .form-group { flex: 1; min-width: 200px; }
+        .form-group label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 5px; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; }
+        .form-group textarea { height: 80px; resize: vertical; }
+
+        .actions-row { display: flex; flex-wrap: wrap; gap: 15px; border-top: 1px solid var(--border); padding-top: 20px; }
+        
+        button { 
+            padding: 10px 20px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; transition: all 0.2s; 
+            display: inline-flex; align-items: center; gap: 8px; font-size: 0.95rem;
+        }
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-primary:hover { background-color: var(--primary-dark); }
+        
+        .btn-secondary { background-color: white; border: 1px solid var(--border); color: var(--text); }
+        .btn-secondary:hover { background-color: #f9fafb; border-color: #d1d5db; }
+
+        .btn-danger { background-color: #fee2e2; color: var(--danger); }
+        .btn-danger:hover { background-color: #fecaca; }
+
+        /* Sección Histórico */
+        details {
+            margin-top: 15px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        summary {
+            padding: 10px 15px;
+            background: #f9fafb;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            user-select: none;
+        }
+        summary:hover { background: #f3f4f6; }
+        .history-content { padding: 15px; }
+
+        /* Resultados (Equipos) */
+        #results-area { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        
+        .team-card { 
+            background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid var(--border);
+            break-inside: avoid; /* Para impresión */
+        }
+        .team-header { background: #f8fafc; padding: 12px 15px; border-bottom: 1px solid var(--border); font-weight: 700; display: flex; justify-content: space-between; }
+        .team-list { list-style: none; padding: 15px; }
+        .team-member { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #f3f4f6; }
+        .team-member:last-child { border-bottom: none; }
+        .member-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+        /* Utilidades de Exportación */
+        .export-actions { margin-left: auto; display: flex; gap: 10px; }
+
+        /* Estilos de Impresión */
+        @media print {
+            body { background: white; padding: 0; }
+            .no-print, header, .input-section, .controls-wrapper { display: none !important; }
+            .container { max-width: 100%; width: 100%; margin: 0; }
+            #results-area { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; } /* 2 columnas en papel */
+            .team-card { box-shadow: none; border: 1px solid #000; page-break-inside: avoid; }
+            h1 { display: none; }
+            /* Título para impresión */
+            #print-title { display: block !important; text-align: center; margin-bottom: 20px; font-size: 20px; font-weight: bold; }
+        }
+        #print-title { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="print-title">Equipos de Aprendizaje Cooperativo</div>
+
+    <header>
+        <h1>Gestor de Equipos Cooperativos</h1>
+        <div id="save-indicator" class="status-indicator">
+            <span>✓</span> Guardado automáticamente
+        </div>
+    </header>
+
+    <!-- Sección de Entrada de Datos -->
+    <div class="input-section no-print">
+        <div class="card">
+            <h2><span class="dot high"></span> Nivel Alto (Tutor)</h2>
+            <textarea id="input-high" placeholder="Pegar lista de nombres (uno por línea)..." oninput="handleInput()"></textarea>
+        </div>
+        <div class="card">
+            <h2><span class="dot med"></span> Nivel Medio</h2>
+            <textarea id="input-medium" placeholder="Pegar lista de nombres (uno por línea)..." oninput="handleInput()"></textarea>
+        </div>
+        <div class="card">
+            <h2><span class="dot low"></span> Nivel Bajo (Tutorado)</h2>
+            <textarea id="input-low" placeholder="Pegar lista de nombres (uno por línea)..." oninput="handleInput()"></textarea>
+        </div>
+    </div>
+
+    <!-- Controles y Configuración -->
+    <div class="controls-wrapper no-print">
+        <div class="config-row">
+            <div class="form-group" style="flex: 0 0 100px;">
+                <label for="team-count">Nº Equipos</label>
+                <input type="number" id="team-count" min="1" value="4" oninput="handleInput()">
+            </div>
+            <div class="form-group">
+                <label for="mandatory">Parejas Obligatorias (Juntos)</label>
+                <input type="text" id="mandatory" placeholder="Ej: Luis, Ana; Pedro, Pablo" oninput="handleInput()">
+                <small style="color: var(--success); font-size: 0.75rem;">Estos alumnos irán siempre juntos.</small>
+            </div>
+            <div class="form-group">
+                <label for="conflicts">Incompatibilidades (Separados)</label>
+                <input type="text" id="conflicts" placeholder="Ej: Juan, Pedro; Ana, María" oninput="handleInput()">
+                <small style="color: var(--danger); font-size: 0.75rem;">Estos alumnos nunca irán juntos.</small>
+            </div>
+        </div>
+
+        <details>
+            <summary>📂 Histórico / Grupos Anteriores (Evitar Repeticiones)</summary>
+            <div class="history-content">
+                <div class="form-group">
+                    <label style="font-weight: normal;">Pega aquí el contenido de archivos CSV anteriores o listas de equipos. El sistema intentará <strong>evitar</strong> que estas personas vuelvan a coincidir.</label>
+                    <textarea id="history-input" placeholder="Ej: Equipo 1, Juan, Pedro, Maria..." oninput="handleInput()" style="height: 100px; font-family: monospace; font-size: 0.85rem;"></textarea>
+                </div>
+            </div>
+        </details>
+
+        <div class="actions-row">
+            <button class="btn-primary" onclick="generateTeams()">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                Generar Equipos
+            </button>
+            <button class="btn-danger" onclick="clearData()">Borrar Datos</button>
+            
+            <div class="export-actions">
+                <button class="btn-secondary" onclick="exportCSV()">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    CSV
+                </button>
+                <button class="btn-secondary" onclick="window.print()">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    PDF / Imprimir
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Área de Resultados -->
+    <div id="results-area">
+        <div style="grid-column: 1/-1; text-align: center; color: #6b7280; padding: 40px;">
+            Ingresa los alumnos y haz clic en "Generar Equipos"
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Estado y Configuración ---
+    const STORAGE_KEY = 'coop_teams_data_v2';
+    let currentTeams = []; 
+    let timeoutId = null;
+
+    // --- DOM Elements ---
+    const els = {
+        high: document.getElementById('input-high'),
+        med: document.getElementById('input-medium'),
+        low: document.getElementById('input-low'),
+        count: document.getElementById('team-count'),
+        conflicts: document.getElementById('conflicts'),
+        mandatory: document.getElementById('mandatory'),
+        history: document.getElementById('history-input'),
+        results: document.getElementById('results-area'),
+        indicator: document.getElementById('save-indicator')
+    };
+
+    // --- Inicialización ---
+    window.addEventListener('DOMContentLoaded', () => {
+        loadData();
+    });
+
+    // --- Persistencia ---
+    function handleInput() {
+        saveData();
+        showSavedIndicator();
+    }
+
+    function saveData() {
+        const data = {
+            high: els.high.value,
+            med: els.med.value,
+            low: els.low.value,
+            count: els.count.value,
+            conflicts: els.conflicts.value,
+            mandatory: els.mandatory.value,
+            history: els.history.value
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    function loadData() {
+        const data = localStorage.getItem(STORAGE_KEY);
+        if (data) {
+            const parsed = JSON.parse(data);
+            els.high.value = parsed.high || '';
+            els.med.value = parsed.med || '';
+            els.low.value = parsed.low || '';
+            els.count.value = parsed.count || 4;
+            els.conflicts.value = parsed.conflicts || '';
+            els.mandatory.value = parsed.mandatory || '';
+            els.history.value = parsed.history || '';
+        }
+    }
+
+    function clearData() {
+        if(confirm('¿Estás seguro de borrar todos los datos?')) {
+            localStorage.removeItem(STORAGE_KEY);
+            Object.values(els).forEach(el => {
+                if(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = '';
+            });
+            els.count.value = 4;
+            els.results.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #6b7280; padding: 40px;">Datos borrados. Empieza de nuevo.</div>';
+            currentTeams = [];
+        }
+    }
+
+    function showSavedIndicator() {
+        els.indicator.classList.add('visible');
+        if (timeoutId) clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+            els.indicator.classList.remove('visible');
+        }, 2000);
+    }
+
+    // --- Helpers de Algoritmo ---
+    function parseList(text) {
+        return text.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+    }
+
+    function parsePairs(text) {
+        if (!text) return [];
+        const rawPairs = text.split(/;|\n/); 
+        const pairs = [];
+        rawPairs.forEach(pair => {
+            const names = pair.split(',').map(s => s.trim().toLowerCase()).filter(s => s);
+            if (names.length >= 2) {
+                // Si hay más de 2 (ej: A, B, C) genera pares (A,B), (B,C), (A,C)
+                for(let i=0; i<names.length; i++) {
+                    for(let j=i+1; j<names.length; j++) {
+                        pairs.push([names[i], names[j]]);
+                    }
+                }
+            }
+        });
+        return pairs;
+    }
+
+    // Parsea el historial (pueden ser líneas enteras de CSV)
+    function parseHistory(text) {
+        if(!text) return [];
+        const lines = text.split('\n');
+        const historyPairs = [];
+        lines.forEach(line => {
+            // Limpieza básica de CSV
+            const parts = line.split(/,|;/).map(s => s.trim().toLowerCase()).filter(s => s && !s.startsWith('equipo') && !s.startsWith('nombre') && !s.startsWith('categoria'));
+            if(parts.length >= 2) {
+                for(let i=0; i<parts.length; i++) {
+                    for(let j=i+1; j<parts.length; j++) {
+                        historyPairs.push([parts[i], parts[j]]);
+                    }
+                }
+            }
+        });
+        return historyPairs;
+    }
+
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function hasConflict(teamMembers, conflictList) {
+        const teamNames = teamMembers.map(m => m.name.toLowerCase());
+        for (let pair of conflictList) {
+            // Verificar si ambos miembros del par conflictivo están en el equipo
+            const p1 = pair[0];
+            const p2 = pair[1];
+            if (teamNames.includes(p1) && teamNames.includes(p2)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // --- Algoritmo Principal ---
+    function generateTeams() {
+        // 1. Preparar datos
+        const high = parseList(els.high.value).map(n => ({ name: n, level: 'high', label: 'Alto', assigned: false }));
+        const med = parseList(els.med.value).map(n => ({ name: n, level: 'med', label: 'Medio', assigned: false }));
+        const low = parseList(els.low.value).map(n => ({ name: n, level: 'low', label: 'Bajo', assigned: false }));
+        
+        const allStudents = [...high, ...med, ...low];
+        const numTeams = parseInt(els.count.value) || 1;
+        
+        // Conflictos (Incompatibilidades + Historial)
+        const strictConflicts = parsePairs(els.conflicts.value);
+        const historyConflicts = parseHistory(els.history.value);
+        const allConflicts = [...strictConflicts, ...historyConflicts];
+
+        // Obligatorios
+        const mandatoryGroups = parsePairs(els.mandatory.value); // Lista de [A, B]
+
+        if (allStudents.length === 0) {
+            alert("Por favor introduce alumnos en las listas.");
+            return;
+        }
+
+        let bestAllocation = null;
+        let attempts = 0;
+        const MAX_ATTEMPTS = 200; // Aumentado para manejar más restricciones
+
+        // Bucle de reintento
+        while (attempts < MAX_ATTEMPTS) {
+            // Reset asignaciones
+            allStudents.forEach(s => s.assigned = false);
+            
+            // Inicializar equipos
+            const teams = Array.from({ length: numTeams }, (_, i) => ({ id: i + 1, members: [] }));
+            
+            // Mapa rápido para buscar estudiantes por nombre
+            const studentMap = {};
+            allStudents.forEach(s => studentMap[s.name.toLowerCase()] = s);
+
+            // --- FASE 1: Asignar Parejas Obligatorias ---
+            // Asignamos parejas al equipo con MENOS miembros en ese momento
+            for (let pair of mandatoryGroups) {
+                const s1 = studentMap[pair[0]];
+                const s2 = studentMap[pair[1]];
+
+                if (s1 && s2) {
+                    let targetTeam = null;
+
+                    // Si alguno ya está asignado, buscamos su equipo
+                    const t1 = teams.find(t => t.members.includes(s1));
+                    const t2 = teams.find(t => t.members.includes(s2));
+
+                    if (t1) targetTeam = t1;
+                    else if (t2) targetTeam = t2;
+                    else {
+                        // Buscar el equipo más vacío
+                        teams.sort((a, b) => a.members.length - b.members.length);
+                        targetTeam = teams[0];
+                    }
+
+                    if (targetTeam) {
+                        if (!s1.assigned) { targetTeam.members.push(s1); s1.assigned = true; }
+                        if (!s2.assigned) { targetTeam.members.push(s2); s2.assigned = true; }
+                    }
+                }
+            }
+
+            // --- FASE 2: Rellenar resto (Distrubución Inteligente) ---
+            // Barajamos los NO asignados
+            const unassignedHigh = shuffle(high.filter(s => !s.assigned));
+            const unassignedMed = shuffle(med.filter(s => !s.assigned));
+            const unassignedLow = shuffle(low.filter(s => !s.assigned));
+
+            // Función de distribución inteligente
+            const distributeSmartly = (list) => {
+                list.forEach(student => {
+                    // Ordenamos equipos para encontrar el mejor candidato:
+                    // 1. Prioridad: Que tenga MENOS miembros de este nivel (equilibrio vertical)
+                    // 2. Prioridad: Que tenga MENOS miembros en total (equilibrio tamaño)
+                    teams.sort((a, b) => {
+                        const countLevelA = a.members.filter(m => m.level === student.level).length;
+                        const countLevelB = b.members.filter(m => m.level === student.level).length;
+                        
+                        if (countLevelA !== countLevelB) return countLevelA - countLevelB;
+                        return a.members.length - b.members.length;
+                    });
+                    
+                    teams[0].members.push(student);
+                    student.assigned = true;
+                });
+            };
+
+            distributeSmartly(unassignedHigh);
+            distributeSmartly(unassignedMed);
+            distributeSmartly(unassignedLow);
+
+            // --- FASE 3: Validar Conflictos ---
+            let conflictsFound = false;
+            
+            // Chequeo de Incompatibilidades y Historial
+            for (let team of teams) {
+                if (hasConflict(team.members, allConflicts)) {
+                    conflictsFound = true;
+                    break;
+                }
+            }
+
+            if (!conflictsFound) {
+                bestAllocation = teams;
+                break; // Éxito
+            }
+            
+            attempts++;
+        }
+
+        if (!bestAllocation) {
+            alert(`No se pudo encontrar una combinación perfecta tras ${MAX_ATTEMPTS} intentos.\n\nPosibles causas:\n1. Demasiadas restricciones (historial o incompatibilidades).\n2. Pocos equipos para tanta gente incompatible.\n\nSe mostrará el mejor intento posible (puede contener coincidencias).`);
+            
+            // Generación fallback rápida
+            const teams = Array.from({ length: numTeams }, (_, i) => ({ id: i + 1, members: [] }));
+            let idx = 0;
+            [...high, ...med, ...low].forEach(s => {
+                teams[idx].members.push(s);
+                idx = (idx + 1) % numTeams;
+            });
+            bestAllocation = teams;
+        }
+
+        currentTeams = bestAllocation;
+        renderTeams(bestAllocation);
+    }
+
+    // --- Renderizado ---
+    function renderTeams(teams) {
+        els.results.innerHTML = '';
+        teams.forEach(team => {
+            const card = document.createElement('div');
+            card.className = 'team-card';
+            
+            let membersHtml = '';
+            // Ordenar miembros por nivel para visualización consistente: High -> Med -> Low
+            const order = { 'high': 1, 'med': 2, 'low': 3 };
+            team.members.sort((a, b) => order[a.level] - order[b.level]);
+
+            team.members.forEach(m => {
+                const colorVar = `var(--level-${m.level})`;
+                membersHtml += `
+                    <li class="team-member">
+                        <span class="member-dot" style="background-color: ${colorVar}"></span>
+                        <span>${m.name}</span>
+                    </li>
+                `;
+            });
+
+            card.innerHTML = `
+                <div class="team-header">
+                    <span>Equipo ${team.id}</span>
+                    <span style="font-weight:400; font-size: 0.9em; color: #6b7280">${team.members.length} miembros</span>
+                </div>
+                <ul class="team-list">
+                    ${membersHtml}
+                </ul>
+            `;
+            els.results.appendChild(card);
+        });
+    }
+
+    // --- Exportación ---
+    function exportCSV() {
+        if (currentTeams.length === 0) {
+            alert('Primero genera los equipos.');
+            return;
+        }
+
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
+        csvContent += "Equipo,Nombre,Categoria\n";
+
+        currentTeams.forEach(team => {
+            team.members.forEach(member => {
+                const nameClean = member.name.replace(/"/g, '""');
+                csvContent += `Equipo ${team.id},"${nameClean}",${member.label}\n`;
+            });
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `equipos_cooperativos_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
+
+</body>
+</html>
