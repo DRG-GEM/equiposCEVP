@@ -192,10 +192,54 @@
         summary:hover { background: #e2e8f0; color: var(--text-main); }
         .history-content { padding: 20px; background: white; }
         
-        .history-grid {
+        /* Grid de Historial Dinámico */
+        #history-list {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             gap: 15px;
+            margin-top: 15px;
+        }
+        .history-card {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 8px;
+            position: relative;
+        }
+        .history-card label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 5px;
+            display: block;
+            text-transform: uppercase;
+        }
+        .history-card textarea {
+            height: 60px;
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+            background: white;
+        }
+        .history-card .btn-remove {
+            width: 100%;
+            padding: 6px;
+            font-size: 0.8rem;
+            background: white;
+            color: var(--danger);
+            border: 1px solid #fecaca;
+            justify-content: center;
+        }
+        .history-card .btn-remove:hover {
+            background: #fef2f2;
+        }
+        .btn-add-history {
+            background: #f0fdf4;
+            color: var(--success);
+            border: 1px solid #bbf7d0;
+            margin-top: 10px;
+        }
+        .btn-add-history:hover {
+            background: #dcfce7;
         }
 
         /* Resultados */
@@ -328,21 +372,16 @@
             <summary>📂 Histórico / Grupos Anteriores (Evitar Repeticiones)</summary>
             <div class="history-content">
                 <p style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-muted);">
-                    Pega aquí los listados completos de distribuciones anteriores. El sistema leerá estas listas y tratará de no volver a juntar a personas que ya hayan coincidido.
+                    Añade un recuadro por cada grupo que tuvieras en el trimestre anterior. Escribe dentro los nombres de los alumnos que iban juntos. El sistema evitará que vuelvan a coincidir.
                 </p>
-                <div class="history-grid">
-                    <div class="form-group">
-                        <label>Distribución Anterior 1</label>
-                        <textarea id="history-1" placeholder="Pega aquí la lista o CSV de una vez anterior..." oninput="handleInput()" style="height: 120px; font-family: monospace; font-size: 0.85rem; color: var(--text-muted);"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Distribución Anterior 2</label>
-                        <textarea id="history-2" placeholder="Pega aquí otra lista..." oninput="handleInput()" style="height: 120px; font-family: monospace; font-size: 0.85rem; color: var(--text-muted);"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Distribución Anterior 3</label>
-                        <textarea id="history-3" placeholder="Pega aquí otra lista..." oninput="handleInput()" style="height: 120px; font-family: monospace; font-size: 0.85rem; color: var(--text-muted);"></textarea>
-                    </div>
+                
+                <button class="btn-secondary btn-add-history" onclick="addHistoryGroup()">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Añadir Grupo Pasado
+                </button>
+
+                <div id="history-list">
+                    <!-- Aquí se añadirán dinámicamente las tarjetas de grupos -->
                 </div>
             </div>
         </details>
@@ -360,7 +399,7 @@
                     CSV
                 </button>
                 <button class="btn-secondary" onclick="window.print()">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
                     PDF
                 </button>
             </div>
@@ -379,7 +418,7 @@
 
 <script>
     // --- Estado y Configuración ---
-    const STORAGE_KEY = 'coop_teams_data_v3'; // Nueva versión de key para limpiar caché anterior
+    const STORAGE_KEY = 'coop_teams_data_v4'; // V4 para nueva estructura de historial
     let currentTeams = []; 
     let timeoutId = null;
 
@@ -391,10 +430,7 @@
         count: document.getElementById('team-count'),
         conflicts: document.getElementById('conflicts'),
         mandatory: document.getElementById('mandatory'),
-        // Histórico ahora son 3
-        h1: document.getElementById('history-1'),
-        h2: document.getElementById('history-2'),
-        h3: document.getElementById('history-3'),
+        historyList: document.getElementById('history-list'),
         results: document.getElementById('results-area'),
         indicator: document.getElementById('save-indicator')
     };
@@ -404,6 +440,24 @@
         loadData();
     });
 
+    // --- Gestión de Historial Dinámico ---
+    function addHistoryGroup(value = '') {
+        const div = document.createElement('div');
+        div.className = 'history-card';
+        div.innerHTML = `
+            <label>Grupo Pasado</label>
+            <textarea class="history-input" placeholder="Ej: Juan, Maria, Pedro..." oninput="handleInput()">${value}</textarea>
+            <button class="btn-remove" onclick="removeHistoryGroup(this)">Eliminar</button>
+        `;
+        els.historyList.appendChild(div);
+        if(!value) handleInput(); // Guardar al añadir nuevo vacío
+    }
+
+    function removeHistoryGroup(btn) {
+        btn.parentElement.remove();
+        handleInput();
+    }
+
     // --- Persistencia ---
     function handleInput() {
         saveData();
@@ -411,6 +465,12 @@
     }
 
     function saveData() {
+        // Recoger todos los valores del historial dinámico
+        const historyValues = [];
+        document.querySelectorAll('.history-input').forEach(textarea => {
+            historyValues.push(textarea.value);
+        });
+
         const data = {
             high: els.high.value,
             med: els.med.value,
@@ -418,9 +478,7 @@
             count: els.count.value,
             conflicts: els.conflicts.value,
             mandatory: els.mandatory.value,
-            h1: els.h1.value,
-            h2: els.h2.value,
-            h3: els.h3.value
+            history: historyValues // Guardamos array
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }
@@ -435,19 +493,28 @@
             els.count.value = parsed.count || 4;
             els.conflicts.value = parsed.conflicts || '';
             els.mandatory.value = parsed.mandatory || '';
-            els.h1.value = parsed.h1 || '';
-            els.h2.value = parsed.h2 || '';
-            els.h3.value = parsed.h3 || '';
+            
+            // Cargar historial
+            els.historyList.innerHTML = '';
+            if (parsed.history && Array.isArray(parsed.history)) {
+                parsed.history.forEach(val => addHistoryGroup(val));
+            }
         }
     }
 
     function clearData() {
         if(confirm('¿Estás seguro de borrar todos los datos? Esta acción no se puede deshacer.')) {
             localStorage.removeItem(STORAGE_KEY);
-            Object.values(els).forEach(el => {
-                if(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = '';
-            });
+            // Limpiar inputs estáticos
+            els.high.value = '';
+            els.med.value = '';
+            els.low.value = '';
             els.count.value = 4;
+            els.conflicts.value = '';
+            els.mandatory.value = '';
+            // Limpiar historial dinámico
+            els.historyList.innerHTML = '';
+
             els.results.innerHTML = `
                 <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 60px; background: white; border-radius: 12px; border: 2px dashed var(--border);">
                     <svg style="width: 48px; height: 48px; margin-bottom: 15px; color: var(--border);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
@@ -487,13 +554,19 @@
         return pairs;
     }
 
-    function parseHistory(text) {
-        if(!text) return [];
-        const lines = text.split('\n');
+    function parseHistoryFromInputs() {
         const historyPairs = [];
-        lines.forEach(line => {
-            const parts = line.split(/,|;/).map(s => s.trim().toLowerCase()).filter(s => s && !s.startsWith('equipo') && !s.startsWith('nombre') && !s.startsWith('categoria'));
+        // Leer directamente los inputs del DOM
+        document.querySelectorAll('.history-input').forEach(input => {
+            const text = input.value;
+            if(!text) return;
+            
+            // Asumimos que cada textarea es UN equipo. 
+            // Separadores: coma o salto de linea
+            const parts = text.split(/,|\n/).map(s => s.trim().toLowerCase()).filter(s => s);
+            
             if(parts.length >= 2) {
+                // Crear pares de todos contra todos en este grupo
                 for(let i=0; i<parts.length; i++) {
                     for(let j=i+1; j<parts.length; j++) {
                         historyPairs.push([parts[i], parts[j]]);
@@ -535,9 +608,8 @@
         const numTeams = parseInt(els.count.value) || 1;
         
         const strictConflicts = parsePairs(els.conflicts.value);
-        // Concatenar historial de los 3 cuadros
-        const fullHistoryText = (els.h1.value + '\n' + els.h2.value + '\n' + els.h3.value);
-        const historyConflicts = parseHistory(fullHistoryText);
+        // Usar nueva función para historial
+        const historyConflicts = parseHistoryFromInputs();
         
         const allConflicts = [...strictConflicts, ...historyConflicts];
         const mandatoryGroups = parsePairs(els.mandatory.value);
