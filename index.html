@@ -146,12 +146,17 @@
         .form-group { flex: 1; min-width: 200px; }
         .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.02em; }
         
-        .form-group input, .form-group textarea { 
+        .form-group input, .form-group textarea, .form-group select { 
             width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; 
             background: #f8fafc; transition: all 0.2s; font-size: 0.95rem;
         }
         .form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
         .form-group textarea { height: 80px; resize: vertical; }
+
+        /* Checkbox Custom */
+        .checkbox-wrapper { display: flex; align-items: center; gap: 10px; margin-top: 30px; }
+        .checkbox-wrapper input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer; }
+        .checkbox-wrapper label { margin: 0; cursor: pointer; text-transform: none; color: var(--text-main); font-size: 0.95rem; }
 
         /* Botones */
         .actions-row { display: flex; flex-wrap: wrap; gap: 15px; border-top: 1px solid var(--border); padding-top: 25px; }
@@ -192,7 +197,6 @@
         summary:hover { background: #e2e8f0; color: var(--text-main); }
         .history-content { padding: 20px; background: white; }
         
-        /* Grid de Historial Dinámico */
         #history-list {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -229,20 +233,16 @@
             border: 1px solid #fecaca;
             justify-content: center;
         }
-        .history-card .btn-remove:hover {
-            background: #fef2f2;
-        }
+        .history-card .btn-remove:hover { background: #fef2f2; }
         .btn-add-history {
             background: #f0fdf4;
             color: var(--success);
             border: 1px solid #bbf7d0;
             margin-top: 10px;
         }
-        .btn-add-history:hover {
-            background: #dcfce7;
-        }
+        .btn-add-history:hover { background: #dcfce7; }
 
-        /* Resultados */
+        /* Resultados y DRAG & DROP */
         #results-area { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; }
         
         .team-card { 
@@ -252,7 +252,15 @@
             box-shadow: var(--shadow-sm); 
             border: 1px solid var(--border);
             break-inside: avoid;
+            display: flex;
+            flex-direction: column;
         }
+        /* Highlight al arrastrar sobre el equipo */
+        .team-card.drag-over {
+            border: 2px dashed var(--primary);
+            background-color: #eff6ff;
+        }
+
         .team-header { 
             background: #f8fafc; 
             padding: 15px 20px; 
@@ -261,18 +269,54 @@
             color: var(--primary);
             display: flex; justify-content: space-between; align-items: center;
         }
+        
+        .team-title-edit {
+            border: 1px dashed transparent;
+            padding: 2px 5px;
+            border-radius: 4px;
+            cursor: text;
+        }
+        .team-title-edit:hover, .team-title-edit:focus {
+            border-color: var(--primary);
+            background: white;
+            outline: none;
+        }
+
         .team-badge { background: white; border: 1px solid var(--border); padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
         
-        .team-list { list-style: none; padding: 10px 0; }
+        .team-list { list-style: none; padding: 10px 0; flex-grow: 1; min-height: 50px; }
+        
         .team-member { 
             display: flex; align-items: center; gap: 12px; 
             padding: 10px 20px; 
             border-bottom: 1px solid #f1f5f9; 
-            transition: background 0.2s;
+            transition: background 0.2s, transform 0.2s;
+            cursor: grab; /* Indicador de arrastre */
         }
         .team-member:last-child { border-bottom: none; }
         .team-member:hover { background: #f8fafc; }
+        .team-member:active { cursor: grabbing; }
+        
+        /* Estilo mientras se arrastra */
+        .team-member.dragging {
+            opacity: 0.5;
+            background: #e2e8f0;
+            border: 1px dashed #94a3b8;
+        }
+
         .member-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 2px white, 0 0 0 3px rgba(0,0,0,0.05); }
+        
+        .role-badge {
+            margin-left: auto;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            color: #475569;
+            background: #f1f5f9;
+            letter-spacing: 0.02em;
+        }
 
         .export-actions { margin-left: auto; display: flex; gap: 10px; }
 
@@ -282,7 +326,6 @@
             .no-print, header, .input-section, .controls-wrapper { display: none !important; }
             .container { max-width: 100%; width: 100%; margin: 0; padding: 0; }
             
-            /* Cabecera solo para imprimir */
             #print-header { 
                 display: flex !important; 
                 align-items: center; 
@@ -299,6 +342,7 @@
             .team-card { box-shadow: none; border: 1px solid #ccc; page-break-inside: avoid; }
             .team-header { background: #f0f0f0 !important; color: black !important; -webkit-print-color-adjust: exact; }
             .member-dot { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .role-badge { border: 1px solid #ccc; }
         }
         #print-header { display: none; }
     </style>
@@ -354,17 +398,20 @@
                 <label for="mandatory">Parejas Obligatorias (Juntos)</label>
                 <input type="text" id="mandatory" placeholder="Ej: Luis, Ana; Pedro, Pablo" oninput="handleInput()">
                 <small style="color: var(--success); font-size: 0.75rem; margin-top: 4px; display:block;">
-                    Separa las parejas con <strong>punto y coma (;)</strong>. <br>
-                    Ejemplo: <em>Ana, Luis; María, Sofía</em>
+                    Separa las parejas con <strong>punto y coma (;)</strong>.
                 </small>
             </div>
             <div class="form-group">
                 <label for="conflicts">Incompatibilidades (Separados)</label>
                 <input type="text" id="conflicts" placeholder="Ej: Juan, Pedro; Ana, María" oninput="handleInput()">
                 <small style="color: var(--danger); font-size: 0.75rem; margin-top: 4px; display:block;">
-                    Separa los grupos incompatibles con <strong>punto y coma (;)</strong>. <br>
-                    Ejemplo: <em>Juan, Pedro; Carlos, Marta</em>
+                    Separa los grupos incompatibles con <strong>punto y coma (;)</strong>.
                 </small>
+            </div>
+            
+            <div class="checkbox-wrapper">
+                <input type="checkbox" id="enable-roles" onchange="handleInput()">
+                <label for="enable-roles">Asignar Roles Cooperativos (Coordinador, Secretario, etc.)</label>
             </div>
         </div>
 
@@ -372,17 +419,13 @@
             <summary>📂 Histórico / Grupos Anteriores (Evitar Repeticiones)</summary>
             <div class="history-content">
                 <p style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-muted);">
-                    Añade un recuadro por cada grupo que tuvieras en el trimestre anterior. Escribe dentro los nombres de los alumnos que iban juntos. El sistema evitará que vuelvan a coincidir.
+                    Añade un recuadro por cada grupo que tuvieras en el trimestre anterior.
                 </p>
-                
                 <button class="btn-secondary btn-add-history" onclick="addHistoryGroup()">
                     <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                     Añadir Grupo Pasado
                 </button>
-
-                <div id="history-list">
-                    <!-- Aquí se añadirán dinámicamente las tarjetas de grupos -->
-                </div>
+                <div id="history-list"></div>
             </div>
         </details>
 
@@ -399,7 +442,7 @@
                     CSV
                 </button>
                 <button class="btn-secondary" onclick="window.print()">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
                     PDF
                 </button>
             </div>
@@ -418,7 +461,7 @@
 
 <script>
     // --- Estado y Configuración ---
-    const STORAGE_KEY = 'coop_teams_data_v4'; // V4 para nueva estructura de historial
+    const STORAGE_KEY = 'coop_teams_data_v5';
     let currentTeams = []; 
     let timeoutId = null;
 
@@ -430,6 +473,7 @@
         count: document.getElementById('team-count'),
         conflicts: document.getElementById('conflicts'),
         mandatory: document.getElementById('mandatory'),
+        enableRoles: document.getElementById('enable-roles'),
         historyList: document.getElementById('history-list'),
         results: document.getElementById('results-area'),
         indicator: document.getElementById('save-indicator')
@@ -440,17 +484,17 @@
         loadData();
     });
 
-    // --- Gestión de Historial Dinámico ---
+    // --- Historial Dinámico ---
     function addHistoryGroup(value = '') {
         const div = document.createElement('div');
         div.className = 'history-card';
         div.innerHTML = `
             <label>Grupo Pasado</label>
-            <textarea class="history-input" placeholder="Ej: Juan, Maria, Pedro..." oninput="handleInput()">${value}</textarea>
+            <textarea class="history-input" placeholder="Ej: Juan, Maria..." oninput="handleInput()">${value}</textarea>
             <button class="btn-remove" onclick="removeHistoryGroup(this)">Eliminar</button>
         `;
         els.historyList.appendChild(div);
-        if(!value) handleInput(); // Guardar al añadir nuevo vacío
+        if(!value) handleInput();
     }
 
     function removeHistoryGroup(btn) {
@@ -465,11 +509,8 @@
     }
 
     function saveData() {
-        // Recoger todos los valores del historial dinámico
         const historyValues = [];
-        document.querySelectorAll('.history-input').forEach(textarea => {
-            historyValues.push(textarea.value);
-        });
+        document.querySelectorAll('.history-input').forEach(t => historyValues.push(t.value));
 
         const data = {
             high: els.high.value,
@@ -478,7 +519,9 @@
             count: els.count.value,
             conflicts: els.conflicts.value,
             mandatory: els.mandatory.value,
-            history: historyValues // Guardamos array
+            enableRoles: els.enableRoles.checked,
+            history: historyValues,
+            teams: currentTeams // Guardamos también los equipos generados
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }
@@ -493,50 +536,37 @@
             els.count.value = parsed.count || 4;
             els.conflicts.value = parsed.conflicts || '';
             els.mandatory.value = parsed.mandatory || '';
+            els.enableRoles.checked = parsed.enableRoles || false;
             
-            // Cargar historial
             els.historyList.innerHTML = '';
             if (parsed.history && Array.isArray(parsed.history)) {
                 parsed.history.forEach(val => addHistoryGroup(val));
+            }
+
+            // Si hay equipos guardados, renderizarlos directamente
+            if(parsed.teams && parsed.teams.length > 0) {
+                currentTeams = parsed.teams;
+                renderTeams(currentTeams);
             }
         }
     }
 
     function clearData() {
-        if(confirm('¿Estás seguro de borrar todos los datos? Esta acción no se puede deshacer.')) {
+        if(confirm('¿Borrar TODO?')) {
             localStorage.removeItem(STORAGE_KEY);
-            // Limpiar inputs estáticos
-            els.high.value = '';
-            els.med.value = '';
-            els.low.value = '';
-            els.count.value = 4;
-            els.conflicts.value = '';
-            els.mandatory.value = '';
-            // Limpiar historial dinámico
-            els.historyList.innerHTML = '';
-
-            els.results.innerHTML = `
-                <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 60px; background: white; border-radius: 12px; border: 2px dashed var(--border);">
-                    <svg style="width: 48px; height: 48px; margin-bottom: 15px; color: var(--border);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    <p style="font-size: 1.1rem; font-weight: 500;">Datos borrados</p>
-                </div>`;
-            currentTeams = [];
+            location.reload(); 
         }
     }
 
     function showSavedIndicator() {
         els.indicator.classList.add('visible');
         if (timeoutId) clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-            els.indicator.classList.remove('visible');
-        }, 2000);
+        timeoutId = setTimeout(() => els.indicator.classList.remove('visible'), 2000);
     }
 
-    // --- Helpers de Algoritmo ---
-    function parseList(text) {
-        return text.split('\n').map(s => s.trim()).filter(s => s.length > 0);
-    }
-
+    // --- Helpers Algoritmo ---
+    function parseList(text) { return text.split('\n').map(s => s.trim()).filter(s => s.length > 0); }
+    
     function parsePairs(text) {
         if (!text) return [];
         const rawPairs = text.split(/;|\n/); 
@@ -556,17 +586,11 @@
 
     function parseHistoryFromInputs() {
         const historyPairs = [];
-        // Leer directamente los inputs del DOM
         document.querySelectorAll('.history-input').forEach(input => {
             const text = input.value;
             if(!text) return;
-            
-            // Asumimos que cada textarea es UN equipo. 
-            // Separadores: coma o salto de linea
             const parts = text.split(/,|\n/).map(s => s.trim().toLowerCase()).filter(s => s);
-            
             if(parts.length >= 2) {
-                // Crear pares de todos contra todos en este grupo
                 for(let i=0; i<parts.length; i++) {
                     for(let j=i+1; j<parts.length; j++) {
                         historyPairs.push([parts[i], parts[j]]);
@@ -588,191 +612,237 @@
     function hasConflict(teamMembers, conflictList) {
         const teamNames = teamMembers.map(m => m.name.toLowerCase());
         for (let pair of conflictList) {
-            const p1 = pair[0];
-            const p2 = pair[1];
-            if (teamNames.includes(p1) && teamNames.includes(p2)) {
-                return true;
-            }
+            const p1 = pair[0]; const p2 = pair[1];
+            if (teamNames.includes(p1) && teamNames.includes(p2)) return true;
         }
         return false;
     }
 
-    // --- Algoritmo Principal ---
+    // --- Generación ---
     function generateTeams() {
-        // Preparar datos
-        const high = parseList(els.high.value).map(n => ({ name: n, level: 'high', label: 'Alto', assigned: false }));
-        const med = parseList(els.med.value).map(n => ({ name: n, level: 'med', label: 'Medio', assigned: false }));
-        const low = parseList(els.low.value).map(n => ({ name: n, level: 'low', label: 'Bajo', assigned: false }));
+        const high = parseList(els.high.value).map(n => ({ id: crypto.randomUUID(), name: n, level: 'high', label: 'Alto', assigned: false }));
+        const med = parseList(els.med.value).map(n => ({ id: crypto.randomUUID(), name: n, level: 'med', label: 'Medio', assigned: false }));
+        const low = parseList(els.low.value).map(n => ({ id: crypto.randomUUID(), name: n, level: 'low', label: 'Bajo', assigned: false }));
         
         const allStudents = [...high, ...med, ...low];
         const numTeams = parseInt(els.count.value) || 1;
         
         const strictConflicts = parsePairs(els.conflicts.value);
-        // Usar nueva función para historial
         const historyConflicts = parseHistoryFromInputs();
-        
         const allConflicts = [...strictConflicts, ...historyConflicts];
         const mandatoryGroups = parsePairs(els.mandatory.value);
 
-        if (allStudents.length === 0) {
-            alert("Por favor introduce alumnos en las listas.");
-            return;
-        }
+        if (allStudents.length === 0) { alert("Introduce alumnos."); return; }
 
         let bestAllocation = null;
         let attempts = 0;
         const MAX_ATTEMPTS = 500; 
 
-        // Bucle de reintento
         while (attempts < MAX_ATTEMPTS) {
             allStudents.forEach(s => s.assigned = false);
-            const teams = Array.from({ length: numTeams }, (_, i) => ({ id: i + 1, members: [] }));
+            // Iniciar equipos con nombre default
+            const teams = Array.from({ length: numTeams }, (_, i) => ({ id: i + 1, name: `Equipo ${i+1}`, members: [] }));
             
             const studentMap = {};
             allStudents.forEach(s => studentMap[s.name.toLowerCase()] = s);
 
-            // --- FASE 1: Parejas Obligatorias ---
+            // Fase 1: Parejas
             for (let pair of mandatoryGroups) {
                 const s1 = studentMap[pair[0]];
                 const s2 = studentMap[pair[1]];
-
                 if (s1 && s2) {
-                    let targetTeam = null;
-                    const t1 = teams.find(t => t.members.includes(s1));
-                    const t2 = teams.find(t => t.members.includes(s2));
-
-                    if (t1) targetTeam = t1;
-                    else if (t2) targetTeam = t2;
-                    else {
-                        // Buscar equipo más vacío
+                    let targetTeam = teams.find(t => t.members.includes(s1)) || teams.find(t => t.members.includes(s2));
+                    if (!targetTeam) {
                         teams.sort((a, b) => a.members.length - b.members.length);
                         targetTeam = teams[0];
                     }
-
-                    if (targetTeam) {
-                        if (!s1.assigned) { targetTeam.members.push(s1); s1.assigned = true; }
-                        if (!s2.assigned) { targetTeam.members.push(s2); s2.assigned = true; }
-                    }
+                    if (!s1.assigned) { targetTeam.members.push(s1); s1.assigned = true; }
+                    if (!s2.assigned) { targetTeam.members.push(s2); s2.assigned = true; }
                 }
             }
 
-            // --- FASE 2: Relleno Inteligente ---
+            // Fase 2: Relleno
             const unassignedHigh = shuffle(high.filter(s => !s.assigned));
             const unassignedMed = shuffle(med.filter(s => !s.assigned));
             const unassignedLow = shuffle(low.filter(s => !s.assigned));
 
-            const distributeSmartly = (list) => {
+            const distribute = (list) => {
                 list.forEach(student => {
-                    // Criterio: 1. Nivel, 2. Tamaño total
                     teams.sort((a, b) => {
-                        const countLevelA = a.members.filter(m => m.level === student.level).length;
-                        const countLevelB = b.members.filter(m => m.level === student.level).length;
-                        
-                        if (countLevelA !== countLevelB) return countLevelA - countLevelB;
+                        const ca = a.members.filter(m => m.level === student.level).length;
+                        const cb = b.members.filter(m => m.level === student.level).length;
+                        if (ca !== cb) return ca - cb;
                         return a.members.length - b.members.length;
                     });
-                    
                     teams[0].members.push(student);
                     student.assigned = true;
                 });
             };
+            distribute(unassignedHigh);
+            distribute(unassignedMed);
+            distribute(unassignedLow);
 
-            distributeSmartly(unassignedHigh);
-            distributeSmartly(unassignedMed);
-            distributeSmartly(unassignedLow);
-
-            // --- FASE 3: Validación ---
-            let conflictsFound = false;
+            // Fase 3: Check
+            let conflicts = false;
             for (let team of teams) {
-                if (hasConflict(team.members, allConflicts)) {
-                    conflictsFound = true;
-                    break;
-                }
+                if (hasConflict(team.members, allConflicts)) { conflicts = true; break; }
             }
-
-            if (!conflictsFound) {
-                bestAllocation = teams;
-                break;
-            }
-            
+            if (!conflicts) { bestAllocation = teams; break; }
             attempts++;
         }
 
         if (!bestAllocation) {
-            alert(`Aviso: No se encontró una distribución perfecta tras ${MAX_ATTEMPTS} intentos. Se muestra la mejor opción encontrada (puede contener coincidencias del historial).`);
-            
-            // Fallback
-            const teams = Array.from({ length: numTeams }, (_, i) => ({ id: i + 1, members: [] }));
-            // Reset total para fallback
-            const all = [...high, ...med, ...low];
-            const fallbackTeams = Array.from({ length: numTeams }, (_, i) => ({ id: i + 1, members: [] }));
+            alert("No se encontró distribución perfecta. Se muestra la mejor opción posible.");
+            // Fallback simple
+            const teams = Array.from({ length: numTeams }, (_, i) => ({ id: i + 1, name: `Equipo ${i+1}`, members: [] }));
             let fIdx = 0;
-            all.forEach(s => {
-                fallbackTeams[fIdx].members.push(s);
+            [...high, ...med, ...low].forEach(s => {
+                teams[fIdx].members.push(s);
                 fIdx = (fIdx + 1) % numTeams;
             });
-            bestAllocation = fallbackTeams;
+            bestAllocation = teams;
         }
 
         currentTeams = bestAllocation;
-        renderTeams(bestAllocation);
+        handleInput(); // Guardar
+        renderTeams(currentTeams);
     }
 
-    // --- Renderizado ---
+    // --- DRAG AND DROP & Render ---
+    let draggedItem = null;
+    let draggedFromTeamId = null;
+
     function renderTeams(teams) {
         els.results.innerHTML = '';
+        const useRoles = els.enableRoles.checked;
+        const roles = ["Coordinador/a", "Secretario/a", "Portavoz", "Control/Intendente", "Ayudante", "Observador"];
+
         teams.forEach(team => {
             const card = document.createElement('div');
             card.className = 'team-card';
+            card.dataset.teamId = team.id;
             
-            let membersHtml = '';
+            // Eventos Drop Zone en el equipo
+            card.addEventListener('dragover', e => {
+                e.preventDefault();
+                card.classList.add('drag-over');
+            });
+            card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+            card.addEventListener('drop', handleDrop);
+
+            // Ordenar por nivel (High -> Med -> Low)
             const order = { 'high': 1, 'med': 2, 'low': 3 };
             team.members.sort((a, b) => order[a.level] - order[b.level]);
 
-            team.members.forEach(m => {
+            let membersHtml = '';
+            team.members.forEach((m, index) => {
                 const colorVar = `var(--level-${m.level})`;
+                const roleBadge = useRoles && roles[index] ? `<span class="role-badge">${roles[index]}</span>` : '';
+                
                 membersHtml += `
-                    <li class="team-member">
+                    <li class="team-member" draggable="true" data-student-id="${m.id}">
                         <span class="member-dot" style="background-color: ${colorVar}"></span>
                         <span>${m.name}</span>
+                        ${roleBadge}
                     </li>
                 `;
             });
 
+            // Header con nombre editable
             card.innerHTML = `
                 <div class="team-header">
-                    <span>Equipo ${team.id}</span>
+                    <span class="team-title-edit" contenteditable="true" onblur="updateTeamName(${team.id}, this.innerText)">${team.name}</span>
                     <span class="team-badge">${team.members.length} miembros</span>
                 </div>
                 <ul class="team-list">
                     ${membersHtml}
                 </ul>
             `;
+            
+            // Listeners para los miembros (Drag Source)
+            const listItems = card.querySelectorAll('.team-member');
+            listItems.forEach(li => {
+                li.addEventListener('dragstart', (e) => {
+                    draggedItem = li;
+                    draggedFromTeamId = team.id;
+                    li.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+                li.addEventListener('dragend', () => {
+                    li.classList.remove('dragging');
+                    document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+                    draggedItem = null;
+                    draggedFromTeamId = null;
+                });
+            });
+
             els.results.appendChild(card);
         });
     }
 
+    function handleDrop(e) {
+        e.preventDefault();
+        const targetCard = e.target.closest('.team-card');
+        if (!targetCard || !draggedItem) return;
+
+        const targetTeamId = parseInt(targetCard.dataset.teamId);
+        
+        // Si soltamos en el mismo equipo, no hacer nada
+        if (draggedFromTeamId === targetTeamId) return;
+
+        // Lógica de Movimiento de Datos
+        const studentId = draggedItem.dataset.studentId;
+        
+        // Encontrar equipos origen y destino
+        const sourceTeam = currentTeams.find(t => t.id === draggedFromTeamId);
+        const destTeam = currentTeams.find(t => t.id === targetTeamId);
+        
+        // Encontrar estudiante y moverlo
+        const studentIndex = sourceTeam.members.findIndex(m => m.id === studentId);
+        if (studentIndex > -1) {
+            const [student] = sourceTeam.members.splice(studentIndex, 1);
+            destTeam.members.push(student);
+            
+            // Re-renderizar y guardar
+            handleInput(); 
+            renderTeams(currentTeams);
+        }
+    }
+
+    function updateTeamName(teamId, newName) {
+        const team = currentTeams.find(t => t.id === teamId);
+        if (team) {
+            team.name = newName.trim();
+            handleInput(); // Guardar cambios silenciosamente
+        }
+    }
+
     // --- Exportación ---
     function exportCSV() {
-        if (currentTeams.length === 0) {
-            alert('Primero genera los equipos.');
-            return;
-        }
+        if (currentTeams.length === 0) { alert('Primero genera los equipos.'); return; }
 
         let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
-        csvContent += "Equipo,Nombre,Categoria\n";
+        csvContent += "Equipo,Nombre,Categoria,Rol\n"; // Añadido Rol
+        
+        const roles = ["Coordinador/a", "Secretario/a", "Portavoz", "Control/Intendente", "Ayudante", "Observador"];
+        const useRoles = els.enableRoles.checked;
 
         currentTeams.forEach(team => {
-            team.members.forEach(member => {
+            // Re-ordenar para el CSV igual que en pantalla
+            const order = { 'high': 1, 'med': 2, 'low': 3 };
+            const sortedMembers = [...team.members].sort((a, b) => order[a.level] - order[b.level]);
+
+            sortedMembers.forEach((member, index) => {
                 const nameClean = member.name.replace(/"/g, '""');
-                csvContent += `Equipo ${team.id},"${nameClean}",${member.label}\n`;
+                const role = useRoles && roles[index] ? roles[index] : "";
+                csvContent += `${team.name},"${nameClean}",${member.label},${role}\n`;
             });
         });
 
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `equipos_cooperativos_cevp_${new Date().toISOString().slice(0,10)}.csv`);
+        link.setAttribute("download", `equipos_cevp_${new Date().toISOString().slice(0,10)}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
